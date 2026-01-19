@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spin Survival</title>
+    <title>W-Ad Spin Survival</title>
     <style>
         body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: sans-serif; }
-        /* 広告枠 */
-        #ad-wrapper { position: fixed; top: 0; left: 0; width: 100%; height: 70px; background: #333; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #ad-wrapper p { color: #888; font-size: 8px; margin: 0; }
         
+        /* 【上部】広告エリア */
+        #ad-top { position: fixed; top: 0; left: 0; width: 100%; height: 70px; background: #333; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* 【下部】広告エリア */
+        #ad-bottom { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: #333; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        .ad-label { color: #888; font-size: 8px; margin: 0; position: absolute; top: 2px; }
+        
+        /* ゲーム画面（上下の広告70pxずつを避ける） */
         canvas { display: block; margin-top: 70px; background: #000; }
         #ui { position: absolute; top: 80px; left: 0; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; }
         
         #startScreen {
-            position: absolute; top: 70px; left: 0; width: 100%; height: calc(100% - 70px);
+            position: absolute; top: 70px; left: 0; width: 100%; height: calc(100% - 140px);
             background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
         }
         #goButton { padding: 15px 40px; font-size: 24px; background: #ff4757; border: none; border-radius: 50px; color: white; font-weight: bold; }
@@ -22,10 +28,17 @@
 </head>
 <body>
 
-    <div id="ad-wrapper">
-        <p>SPONSOR</p>
-        <div id="ninja-ad-box">
-            <script src="https://adm.shinobi.jp/s/a7801f6e216c0ea8aca9613f79a40a12"></script>
+    <div id="ad-top">
+        <p class="ad-label">SPONSOR</p>
+        <div id="ad-box-1">
+            <script src="https://adm.shinobi.jp/s/f45ec9531b9224f16fb3d12ad04fdb58"></script>
+        </div>
+    </div>
+
+    <div id="ad-bottom">
+        <p class="ad-label">SPONSOR</p>
+        <div id="ad-box-2">
+            <script src="https://adm.shinobi.jp/s/d5e96c35f02156fbb2e06b513f3d26d2"></script>
         </div>
     </div>
 
@@ -46,7 +59,7 @@
         const goButton = document.getElementById("goButton");
 
         canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - 70;
+        canvas.height = window.innerHeight - 140;
 
         let score = 0;
         let gameActive = false;
@@ -62,6 +75,7 @@
             angle = 0;
             obstacles = [];
             speed = 3;
+            ui.innerText = "0";
             spawnObstacle();
             update();
         };
@@ -81,7 +95,6 @@
             if(!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 自機の回転
             if(rotating) angle += 0.1;
             const playerX = canvas.width / 2;
             const playerY = canvas.height - 150;
@@ -89,52 +102,23 @@
             const shipX = playerX + Math.cos(angle) * orbit;
             const shipY = playerY + Math.sin(angle) * orbit;
 
-            // 自機の描画
             ctx.fillStyle = "#00ff00";
             ctx.beginPath();
             ctx.arc(shipX, shipY, 10, 0, Math.PI * 2);
             ctx.fill();
 
-            // 障害物の移動と判定
             obstacles.forEach((ob, i) => {
                 ob.y += speed;
                 ctx.fillStyle = "#ff4757";
                 ctx.fillRect(0, ob.y, ob.gapX, 20);
                 ctx.fillRect(ob.gapX + ob.gapW, ob.y, canvas.width - (ob.gapX + ob.gapW), 20);
 
-                // 当たり判定
                 if(shipY > ob.y && shipY < ob.y + 20) {
                     if(shipX < ob.gapX || shipX > ob.gapX + ob.gapW) {
-                        gameOver();
+                        gameActive = false;
+                        alert("GAME OVER! SCORE: " + score);
+                        location.reload();
                     }
                 }
 
-                if(ob.y > canvas.height) {
-                    obstacles.splice(i, 1);
-                    score++;
-                    ui.innerText = score;
-                    speed += 0.05;
-                }
-            });
-
-            requestAnimationFrame(update);
-        }
-
-        function gameOver() {
-            gameActive = false;
-            alert("GAME OVER! SCORE: " + score);
-            location.reload();
-        }
-
-        // --- 30秒ごとに広告を切り替える ---
-        setInterval(() => {
-            const adBox = document.getElementById("ninja-ad-box");
-            if (adBox) {
-                const tag = adBox.innerHTML;
-                adBox.innerHTML = "";
-                setTimeout(() => { adBox.innerHTML = tag; }, 100);
-            }
-        }, 30000);
-    </script>
-</body>
-</html>
+                if(ob.y > canvas.height
