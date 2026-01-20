@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>W-Ad Spin Survival v2</title>
+    <title>Spin Survival Oval</title>
     <style>
         body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: sans-serif; }
         
-        /* 広告エリア：タップを突き抜けさせる設定 */
+        /* 広告エリア：タップを突き抜けさせる */
         #ad-top { position: fixed; top: 0; left: 0; width: 100%; height: 110px; background: #333; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
         #ad-bottom { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: #333; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
         
@@ -28,17 +28,21 @@
 
     <div id="ad-top">
         <p class="ad-label">SPONSOR</p>
-        <div id="ad-box-1">★</div>
+        <div id="ad-box-1">
+            <script src="https://adm.shinobi.jp/s/60c8ad67627b044ec8c90df49c3d4ed1"></script>
+        </div>
     </div>
 
     <div id="ad-bottom">
         <p class="ad-label">SPONSOR</p>
-        <div id="ad-box-2">★</div>
+        <div id="ad-box-2">
+            <script src="https://adm.shinobi.jp/s/d404b7e80d955f304755c08c4983af3f"></script>
+        </div>
     </div>
 
     <div id="startScreen">
         <h1 style="color:#ff4757;">SPIN ESCAPE</h1>
-        <p>長押しで大きく回転！</p>
+        <p>楕円回転で隙間をぬけろ！</p>
         <button id="goButton">START!</button>
     </div>
 
@@ -68,7 +72,7 @@
 
         function spawnObstacle() {
             if(!gameActive) return;
-            const gap = 110; // 隙間を少し広めに調整
+            const gap = 110;
             const gapPos = Math.random() * (canvas.width - gap);
             obstacles.push({ y: -50, gapX: gapPos, gapW: gap });
             setTimeout(spawnObstacle, 1500 - Math.min(1000, score * 20));
@@ -78,27 +82,27 @@
             if(!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if(rotating) angle += 0.08; // 回転速度を少しマイルドに
+            if(rotating) angle += 0.08;
             
             const playerX = canvas.width / 2;
-            const playerY = canvas.height / 2; // 画面中央で回転
-            const orbit = canvas.width * 0.38; // 回転半径を大きく（画面幅の38%）
+            const playerY = canvas.height / 2;
             
-            const shipX = playerX + Math.cos(angle) * orbit;
-            const shipY = playerY + Math.sin(angle) * orbit;
+            // --- 楕円形の設定 ---
+            const orbitX = canvas.width * 0.4;  // 横の半径（広め）
+            const orbitY = canvas.height * 0.15; // 縦の半径（狭め）
+            
+            const shipX = playerX + Math.cos(angle) * orbitX;
+            const shipY = playerY + Math.sin(angle) * orbitY;
 
-            // 自機
             ctx.fillStyle = "#00ff00";
             ctx.beginPath(); ctx.arc(shipX, shipY, 12, 0, Math.PI * 2); ctx.fill();
 
-            // 障害物
             obstacles.forEach((ob, i) => {
                 ob.y += speed;
                 ctx.fillStyle = "#ff4757";
                 ctx.fillRect(0, ob.y, ob.gapX, 25);
                 ctx.fillRect(ob.gapX + ob.gapW, ob.y, canvas.width, 25);
 
-                // 当たり判定
                 if(shipY > ob.y && shipY < ob.y + 25) {
                     if(shipX < ob.gapX || shipX > ob.gapX + ob.gapW) {
                         gameActive = false; alert("GAME OVER! SCORE: " + score); location.reload();
@@ -109,11 +113,11 @@
             requestAnimationFrame(update);
         }
 
-        // 30秒広告更新
+        // 30秒広告リフレッシュ
         setInterval(() => {
             ["ad-box-1", "ad-box-2"].forEach(id => {
                 const box = document.getElementById(id);
-                if (box && box.innerHTML.trim() !== "★") {
+                if (box) {
                     const tag = box.innerHTML; box.innerHTML = "";
                     setTimeout(() => { box.innerHTML = tag; }, 100);
                 }
