@@ -5,20 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spin Survival Oval</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: sans-serif; touch-action: none; }
         
-        /* 広告エリア：タップを突き抜けさせる */
-        #ad-top { position: fixed; top: 0; left: 0; width: 100%; height: 110px; background: #333; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-        #ad-bottom { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: #333; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+        /* 広告エリア：高さを150pxに拡張して「中サイズ」に対応 */
+        #ad-top, #ad-bottom { 
+            position: fixed; left: 0; width: 100%; height: 150px; 
+            background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; 
+        }
+        #ad-top { top: 0; }
+        #ad-bottom { bottom: 0; }
         
-        #ad-box-1, #ad-box-2 { pointer-events: auto; }
-        .ad-label { color: #888; font-size: 8px; margin: 0; position: absolute; top: 2px; }
+        iframe { border: none; width: 100%; height: 150px; }
         
-        canvas { display: block; margin-top: 110px; background: #000; }
-        #ui { position: absolute; top: 120px; left: 0; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; }
+        /* ゲーム画面の位置調整：上下150pxずつ空ける */
+        canvas { display: block; margin-top: 150px; background: #000; }
+        
+        #ui { position: absolute; top: 160px; left: 0; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 4px #000; }
         
         #startScreen {
-            position: absolute; top: 110px; left: 0; width: 100%; height: calc(100% - 180px);
+            position: absolute; top: 150px; left: 0; width: 100%; height: calc(100vh - 300px);
             background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
         }
         #goButton { padding: 15px 40px; font-size: 24px; background: #ff4757; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; }
@@ -26,19 +31,8 @@
 </head>
 <body>
 
-    <div id="ad-top">
-        <p class="ad-label">SPONSOR</p>
-        <div id="ad-box-1">
-            <script src="https://adm.shinobi.jp/s/60c8ad67627b044ec8c90df49c3d4ed1"></script>
-        </div>
-    </div>
-
-    <div id="ad-bottom">
-        <p class="ad-label">SPONSOR</p>
-        <div id="ad-box-2">
-            <script src="https://adm.shinobi.jp/s/d404b7e80d955f304755c08c4983af3f"></script>
-        </div>
-    </div>
+    <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
+    <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
 
     <div id="startScreen">
         <h1 style="color:#ff4757;">SPIN ESCAPE</h1>
@@ -54,14 +48,14 @@
         const ctx = canvas.getContext("2d");
         const ui = document.getElementById("ui");
         const startScreen = document.getElementById("startScreen");
-        const goButton = document.getElementById("goButton");
 
+        // キャンバスサイズの再計算（上下150pxずつ、計300px引く）
         canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - 180;
+        canvas.height = window.innerHeight - 300;
 
         let score = 0, gameActive = false, angle = 0, rotating = false, obstacles = [], speed = 3;
 
-        goButton.onclick = () => {
+        document.getElementById("goButton").onclick = () => {
             startScreen.style.display = "none";
             gameActive = true; score = 0; angle = 0; obstacles = []; speed = 3; ui.innerText = "0";
             spawnObstacle(); update();
@@ -87,9 +81,8 @@
             const playerX = canvas.width / 2;
             const playerY = canvas.height / 2;
             
-            // --- 楕円形の設定 ---
-            const orbitX = canvas.width * 0.4;  // 横の半径（広め）
-            const orbitY = canvas.height * 0.15; // 縦の半径（狭め）
+            const orbitX = canvas.width * 0.4;
+            const orbitY = canvas.height * 0.2; // 画面に合わせて少し調整
             
             const shipX = playerX + Math.cos(angle) * orbitX;
             const shipY = playerY + Math.sin(angle) * orbitY;
@@ -105,7 +98,9 @@
 
                 if(shipY > ob.y && shipY < ob.y + 25) {
                     if(shipX < ob.gapX || shipX > ob.gapX + ob.gapW) {
-                        gameActive = false; alert("GAME OVER! SCORE: " + score); location.reload();
+                        gameActive = false; 
+                        alert("GAME OVER! SCORE: " + score); 
+                        location.reload();
                     }
                 }
                 if(ob.y > canvas.height) { obstacles.splice(i, 1); score++; ui.innerText = score; speed += 0.04; }
@@ -113,16 +108,17 @@
             requestAnimationFrame(update);
         }
 
-        // 30秒広告リフレッシュ
+        // 🚀 30秒ごとにad.htmlを強制転生させる
         setInterval(() => {
-            ["ad-box-1", "ad-box-2"].forEach(id => {
-                const box = document.getElementById(id);
-                if (box) {
-                    const tag = box.innerHTML; box.innerHTML = "";
-                    setTimeout(() => { box.innerHTML = tag; }, 100);
+            ["frame-top", "frame-bottom"].forEach(id => {
+                const frame = document.getElementById(id);
+                if (frame) {
+                    const currentSrc = frame.src;
+                    frame.src = "about:blank"; // 一旦空にする
+                    setTimeout(() => { frame.src = currentSrc; }, 100); // 0.1秒後に再読み込み
                 }
             });
-        }, 20100);
+        }, 29000);
     </script>
 </body>
 </html>
