@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spin Escape</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: sans-serif; touch-action: none; }
-        #ad-top, #ad-bottom { position: fixed; left: 0; width: 100%; height: 150px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        #ad-top { top: 0; } #ad-bottom { bottom: 0; }
-        iframe { border: none; width: 100%; height: 150px; }
-        canvas { display: block; margin-top: 150px; background: #000; }
-        #ui { position: absolute; top: 160px; left: 0; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; z-index: 10; }
-        #menuScreen { position: absolute; top: 150px; left: 0; width: 100%; height: calc(100vh - 300px); background: rgba(0,0,0,0.95); color: white; display: flex; flex-direction: column; align-items: center; justify-content: space-around; z-index: 200; padding: 10px 0; box-sizing: border-box; }
-        #ad-middle-container { width: 336px; min-height: 250px; display: none; justify-content: center; align-items: center; }
-        .btn-group { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; transition: opacity 0.3s; }
+        body { margin: 0; height: 100vh; display: flex; flex-direction: column; background: #0a0a0a; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        #ad-top, #ad-bottom { width: 100%; height: 120px; background: #333; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 100; }
+        iframe { border: none; width: 100%; height: 100%; }
+        #game-area { flex-grow: 1; position: relative; width: 100%; background: #000; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; }
+        #ui { position: absolute; top: 10px; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; z-index: 10; }
+        #menuScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); color: white; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; z-index: 200; padding: 20px 0; box-sizing: border-box; }
+        #ad-middle-container { width: 300px; height: 250px; background: #333; display: none; justify-content: center; align-items: center; overflow: hidden; position: relative; flex-shrink: 0; }
+        .btn-group { display: flex; flex-direction: column; align-items: center; gap: 10px; flex-shrink: 0; }
         .menu-btn { padding: 12px 30px; font-size: 18px; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; text-decoration: none; width: 240px; text-align: center; }
         #goButton { background: #ff4757; box-shadow: 0 4px #b3323d; }
         .link-btn { background: #ff4081; box-shadow: 0 4px #c2185b; }
@@ -21,30 +21,40 @@
 </head>
 <body>
     <div id="ad-top"><iframe src="ad.html"></iframe></div>
-    <div id="ad-bottom"><iframe src="ad.html"></iframe></div>
-    <div id="menuScreen">
-        <div style="text-align:center;"><h2 id="menuTitle" style="color:#ff4757; margin:0;">SPIN ESCAPE</h2><p id="menuMsg" style="margin:2px 0;">楕円回転で隙間をぬけろ！</p></div>
-        <div id="ad-middle-container"><script src="https://adm.shinobi.jp/s/1032eae8cb11c685ef9a7bad656b80ee"></script></div>
-        <div class="btn-group" id="btnGroup" style="opacity: 1;"><button id="goButton" class="menu-btn">START!</button><a href="https://saaaachi.github.io/Namber-Order/" class="menu-btn link-btn">他のゲームはこちら</a></div>
+    <div id="game-area">
+        <div id="ui">0</div>
+        <div id="menuScreen">
+            <div style="text-align:center;"><h2 id="menuTitle" style="color:#ff4757; margin:0;">SPIN ESCAPE</h2><p id="menuMsg" style="margin:2px 0;">隙間をぬけろ！</p></div>
+            <div id="ad-middle-container"><script src="https://adm.shinobi.jp/s/1e6de436ea850948e238e975a93767eb"></script></div>
+            <div class="btn-group" id="btnGroup">
+                <button id="goButton" class="menu-btn">START!</button>
+                <a href="https://saaaachi.github.io/Namber-Order/" class="menu-btn link-btn">他のゲームはこちら</a>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
     </div>
-    <div id="ui">0</div>
-    <canvas id="gameCanvas"></canvas>
+    <div id="ad-bottom"><iframe src="ad.html"></iframe></div>
     <script>
         const canvas = document.getElementById("gameCanvas"), ctx = canvas.getContext("2d"), ui = document.getElementById("ui"), menuScreen = document.getElementById("menuScreen"), menuTitle = document.getElementById("menuTitle"), menuMsg = document.getElementById("menuMsg"), goButton = document.getElementById("goButton"), adMid = document.getElementById("ad-middle-container"), btnGroup = document.getElementById("btnGroup");
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight - 300;
+        function resize() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; }
+        window.onload = () => { resize(); adMid.style.display = "none"; };
         let score = 0, gameActive = false, angle = 0, rotating = false, obstacles = [], speed = 3;
-        goButton.onclick = () => { menuScreen.style.display = "none"; adMid.style.display = "none"; btnGroup.style.opacity = "0"; btnGroup.style.pointerEvents = "none"; gameActive = true; score = 0; angle = 0; obstacles = []; speed = 3; ui.innerText = "0"; spawnObstacle(); update(); };
+        goButton.onclick = () => { menuScreen.style.display = "none"; adMid.style.display = "none"; gameActive = true; score = 0; angle = 0; obstacles = []; speed = 3; ui.innerText = "0"; spawnObstacle(); update(); };
         window.addEventListener("pointerdown", () => { rotating = true; }); window.addEventListener("pointerup", () => { rotating = false; });
         function spawnObstacle() { if(!gameActive) return; const gap = 110; const gapPos = Math.random() * (canvas.width - gap); obstacles.push({ y: -50, gapX: gapPos, gapW: gap }); setTimeout(spawnObstacle, 1500 - Math.min(1000, score * 20)); }
         function update() {
             if(!gameActive) return; ctx.clearRect(0, 0, canvas.width, canvas.height); if(rotating) angle += 0.08;
-            const px = canvas.width / 2, py = canvas.height / 2, ox = canvas.width * 0.4, oy = canvas.height * 0.2;
-            const sx = px + Math.cos(angle) * ox, sy = py + Math.sin(angle) * oy; ctx.fillStyle = "#00ff00"; ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI * 2); ctx.fill();
+            const px = canvas.width / 2, py = canvas.height / 2, ox = canvas.width * 0.4, oy = canvas.height * 0.2, sx = px + Math.cos(angle) * ox, sy = py + Math.sin(angle) * oy;
+            ctx.fillStyle = "#00ff00"; ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI * 2); ctx.fill();
             for(let i = obstacles.length - 1; i >= 0; i--) { let ob = obstacles[i]; ob.y += speed; ctx.fillStyle = "#ff4757"; ctx.fillRect(0, ob.y, ob.gapX, 25); ctx.fillRect(ob.gapX + ob.gapW, ob.y, canvas.width, 25); if(sy > ob.y && sy < ob.y + 25) { if(sx < ob.gapX || sx > ob.gapX + ob.gapW) { gameOver(); return; } } if(ob.y > canvas.height) { obstacles.splice(i, 1); score++; ui.innerText = score; speed += 0.04; } }
             requestAnimationFrame(update);
         }
-        function gameOver() { gameActive = false; menuTitle.innerText = "GAME OVER"; menuTitle.style.color = "#ff4757"; menuMsg.innerText = "SCORE: " + score; goButton.innerText = "RETRY"; adMid.style.display = "flex"; menuScreen.style.display = "flex"; setTimeout(() => { btnGroup.style.opacity = "1"; btnGroup.style.pointerEvents = "auto"; }, 500); }
-        setInterval(() => { document.querySelectorAll('iframe').forEach(f => { const s = f.src; f.src = "about:blank"; setTimeout(() => f.src = s, 100); }); }, 30000);
+        function gameOver() {
+            gameActive = false; menuTitle.innerText = "GAME OVER"; menuTitle.style.color = "#ff4757"; menuMsg.innerText = "SCORE: " + score; goButton.innerText = "RETRY";
+            btnGroup.style.opacity = "0"; btnGroup.style.pointerEvents = "none";
+            adMid.style.display = "flex"; menuScreen.style.display = "flex";
+            setTimeout(() => { btnGroup.style.opacity = "1"; btnGroup.style.pointerEvents = "auto"; }, 500);
+        }
     </script>
 </body>
-</html>？
+</html>
