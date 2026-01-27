@@ -6,154 +6,47 @@
     <title>Spin Escape</title>
     <style>
         body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: sans-serif; touch-action: none; }
-        
-        /* 広告エリア固定：150px */
-        #ad-top, #ad-bottom { 
-            position: fixed; left: 0; width: 100%; height: 150px; 
-            background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; 
-        }
-        #ad-top { top: 0; }
-        #ad-bottom { bottom: 0; }
+        #ad-top, #ad-bottom { position: fixed; left: 0; width: 100%; height: 150px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        #ad-top { top: 0; } #ad-bottom { bottom: 0; }
         iframe { border: none; width: 100%; height: 150px; }
-
         canvas { display: block; margin-top: 150px; background: #000; }
-        
-        #ui { position: absolute; top: 160px; left: 0; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 4px #000; z-index: 10; }
-        
-        /* メニュー画面（スタート＆リザルト） */
-        #menuScreen {
-            position: absolute; top: 150px; left: 0; width: 100%; height: calc(100vh - 300px);
-            background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
-        }
-
-        .menu-btn { 
-            padding: 15px 40px; font-size: 20px; border: none; border-radius: 50px; 
-            color: white; font-weight: bold; cursor: pointer; text-decoration: none; 
-            display: inline-block; margin: 10px; text-align: center;
-        }
+        #ui { position: absolute; top: 160px; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; z-index: 10; }
+        #menuScreen { position: absolute; top: 150px; left: 0; width: 100%; height: calc(100vh - 300px); background: rgba(0,0,0,0.95); color: white; display: flex; flex-direction: column; align-items: center; justify-content: space-around; z-index: 200; padding: 10px 0; box-sizing: border-box; }
+        #ad-middle { width: 300px; height: 250px; display: none; }
+        .btn-group { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
+        .menu-btn { padding: 12px 30px; font-size: 18px; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; text-decoration: none; width: 240px; text-align: center; }
         #goButton { background: #ff4757; box-shadow: 0 4px #b3323d; }
-        .link-btn { background: #ff4081; box-shadow: 0 4px #c2185b; font-size: 18px; }
+        .link-btn { background: #ff4081; box-shadow: 0 4px #c2185b; }
     </style>
 </head>
 <body>
-
-    <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
-    <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
-
+    <div id="ad-top"><iframe src="ad.html"></iframe></div>
+    <div id="ad-bottom"><iframe src="ad.html"></iframe></div>
     <div id="menuScreen">
-        <h1 id="menuTitle" style="color:#ff4757; margin-bottom:10px;">SPIN ESCAPE</h1>
-        <p id="menuMsg" style="margin-bottom:20px;">楕円回転で隙間をぬけろ！</p>
-        <button id="goButton" class="menu-btn">START!</button>
-        <a href="https://saaaachi.github.io/pianotile/" class="menu-btn link-btn">他のゲームはこちら</a>
+        <div style="text-align:center;"><h2 id="menuTitle" style="color:#ff4757; margin:0;">SPIN ESCAPE</h2><p id="menuMsg" style="margin:2px 0;">楕円回転で隙間をぬけろ！</p></div>
+        <div id="ad-middle"><iframe id="frame-middle" src="" style="width:300px; height:250px; border:none;"></iframe></div>
+        <div class="btn-group">
+            <button id="goButton" class="menu-btn">START!</button>
+            <a href="https://saaaachi.github.io/Namber-Order/" class="menu-btn link-btn">他のゲームはこちら</a>
+        </div>
     </div>
-
     <div id="ui">0</div>
     <canvas id="gameCanvas"></canvas>
-
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const ui = document.getElementById("ui");
-        const menuScreen = document.getElementById("menuScreen");
-        const menuTitle = document.getElementById("menuTitle");
-        const menuMsg = document.getElementById("menuMsg");
-        const goButton = document.getElementById("goButton");
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - 300;
-
+        const canvas = document.getElementById("gameCanvas"), ctx = canvas.getContext("2d"), ui = document.getElementById("ui"), menuScreen = document.getElementById("menuScreen"), menuTitle = document.getElementById("menuTitle"), menuMsg = document.getElementById("menuMsg"), goButton = document.getElementById("goButton"), adMiddle = document.getElementById("ad-middle"), frameMiddle = document.getElementById("frame-middle");
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight - 300;
         let score = 0, gameActive = false, angle = 0, rotating = false, obstacles = [], speed = 3;
-        let animationId;
-
-        goButton.onclick = () => {
-            menuScreen.style.display = "none";
-            gameActive = true; 
-            score = 0; 
-            angle = 0; 
-            obstacles = []; 
-            speed = 3; 
-            ui.innerText = "0";
-            spawnObstacle(); 
-            update();
-        };
-
-        window.addEventListener("pointerdown", () => { rotating = true; });
-        window.addEventListener("pointerup", () => { rotating = false; });
-
-        function spawnObstacle() {
-            if(!gameActive) return;
-            const gap = 110;
-            const gapPos = Math.random() * (canvas.width - gap);
-            obstacles.push({ y: -50, gapX: gapPos, gapW: gap });
-            setTimeout(spawnObstacle, 1500 - Math.min(1000, score * 20));
-        }
-
+        goButton.onclick = () => { menuScreen.style.display = "none"; adMiddle.style.display = "none"; frameMiddle.src = ""; gameActive = true; score = 0; angle = 0; obstacles = []; speed = 3; ui.innerText = "0"; spawnObstacle(); update(); };
+        window.addEventListener("pointerdown", () => { rotating = true; }); window.addEventListener("pointerup", () => { rotating = false; });
+        function spawnObstacle() { if(!gameActive) return; const gap = 110; const gapPos = Math.random() * (canvas.width - gap); obstacles.push({ y: -50, gapX: gapPos, gapW: gap }); setTimeout(spawnObstacle, 1500 - Math.min(1000, score * 20)); }
         function update() {
-            if(!gameActive) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if(rotating) angle += 0.08;
-            
-            const playerX = canvas.width / 2;
-            const playerY = canvas.height / 2;
-            const orbitX = canvas.width * 0.4;
-            const orbitY = canvas.height * 0.2;
-            
-            const shipX = playerX + Math.cos(angle) * orbitX;
-            const shipY = playerY + Math.sin(angle) * orbitY;
-
-            // 自機の描画
-            ctx.fillStyle = "#00ff00";
-            ctx.beginPath(); 
-            ctx.arc(shipX, shipY, 12, 0, Math.PI * 2); 
-            ctx.fill();
-
-            // 障害物の処理
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let ob = obstacles[i];
-                ob.y += speed;
-                ctx.fillStyle = "#ff4757";
-                ctx.fillRect(0, ob.y, ob.gapX, 25);
-                ctx.fillRect(ob.gapX + ob.gapW, ob.y, canvas.width, 25);
-
-                // 当たり判定
-                if(shipY > ob.y && shipY < ob.y + 25) {
-                    if(shipX < ob.gapX || shipX > ob.gapX + ob.gapW) {
-                        gameOver();
-                        return;
-                    }
-                }
-
-                if(ob.y > canvas.height) { 
-                    obstacles.splice(i, 1); 
-                    score++; 
-                    ui.innerText = score; 
-                    speed += 0.04; 
-                }
-            }
-            animationId = requestAnimationFrame(update);
+            if(!gameActive) return; ctx.clearRect(0, 0, canvas.width, canvas.height); if(rotating) angle += 0.08;
+            const px = canvas.width / 2, py = canvas.height / 2, ox = canvas.width * 0.4, oy = canvas.height * 0.2;
+            const sx = px + Math.cos(angle) * ox, sy = py + Math.sin(angle) * oy; ctx.fillStyle = "#00ff00"; ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI * 2); ctx.fill();
+            for(let i = obstacles.length - 1; i >= 0; i--) { let ob = obstacles[i]; ob.y += speed; ctx.fillStyle = "#ff4757"; ctx.fillRect(0, ob.y, ob.gapX, 25); ctx.fillRect(ob.gapX + ob.gapW, ob.y, canvas.width, 25); if(sy > ob.y && sy < ob.y + 25) { if(sx < ob.gapX || sx > ob.gapX + ob.gapW) { gameOver(); return; } } if(ob.y > canvas.height) { obstacles.splice(i, 1); score++; ui.innerText = score; speed += 0.04; } }
+            requestAnimationFrame(update);
         }
-
-        function gameOver() {
-            gameActive = false;
-            cancelAnimationFrame(animationId);
-            menuTitle.innerText = "GAME OVER";
-            menuTitle.style.color = "#ff4757";
-            menuMsg.innerText = "SCORE: " + score;
-            goButton.innerText = "RETRY";
-            menuScreen.style.display = "flex";
-        }
-
-        setInterval(() => {
-            ["frame-top", "frame-bottom"].forEach(id => {
-                const frame = document.getElementById(id);
-                if (frame) {
-                    const currentSrc = frame.src;
-                    frame.src = "about:blank";
-                    setTimeout(() => { frame.src = currentSrc; }, 100);
-                }
-            });
-        }, 29000);
+        function gameOver() { gameActive = false; menuTitle.innerText = "GAME OVER"; menuTitle.style.color = "#ff4757"; menuMsg.innerText = "SCORE: " + score; goButton.innerText = "RETRY"; adMiddle.style.display = "flex"; frameMiddle.src = "ad.html"; menuScreen.style.display = "flex"; }
     </script>
 </body>
 </html>
