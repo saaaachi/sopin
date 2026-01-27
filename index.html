@@ -3,30 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spin Survival Oval</title>
+    <title>Spin Escape</title>
     <style>
         body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: sans-serif; touch-action: none; }
         
-        /* 広告エリア：高さを150pxに拡張して「中サイズ」に対応 */
+        /* 広告エリア固定：150px */
         #ad-top, #ad-bottom { 
             position: fixed; left: 0; width: 100%; height: 150px; 
             background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; 
         }
         #ad-top { top: 0; }
         #ad-bottom { bottom: 0; }
-        
         iframe { border: none; width: 100%; height: 150px; }
-        
-        /* ゲーム画面の位置調整：上下150pxずつ空ける */
+
         canvas { display: block; margin-top: 150px; background: #000; }
         
-        #ui { position: absolute; top: 160px; left: 0; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 4px #000; }
+        #ui { position: absolute; top: 160px; left: 0; width: 100%; text-align: center; color: #00ff00; font-size: 30px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 4px #000; z-index: 10; }
         
-        #startScreen {
+        /* メニュー画面（スタート＆リザルト） */
+        #menuScreen {
             position: absolute; top: 150px; left: 0; width: 100%; height: calc(100vh - 300px);
             background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50;
         }
-        #goButton { padding: 15px 40px; font-size: 24px; background: #ff4757; border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; }
+
+        .menu-btn { 
+            padding: 15px 40px; font-size: 20px; border: none; border-radius: 50px; 
+            color: white; font-weight: bold; cursor: pointer; text-decoration: none; 
+            display: inline-block; margin: 10px; text-align: center;
+        }
+        #goButton { background: #ff4757; box-shadow: 0 4px #b3323d; }
+        .link-btn { background: #ff4081; box-shadow: 0 4px #c2185b; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -34,10 +40,11 @@
     <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
     <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
 
-    <div id="startScreen">
-        <h1 style="color:#ff4757;">SPIN ESCAPE</h1>
-        <p>楕円回転で隙間をぬけろ！</p>
-        <button id="goButton">START!</button>
+    <div id="menuScreen">
+        <h1 id="menuTitle" style="color:#ff4757; margin-bottom:10px;">SPIN ESCAPE</h1>
+        <p id="menuMsg" style="margin-bottom:20px;">楕円回転で隙間をぬけろ！</p>
+        <button id="goButton" class="menu-btn">START!</button>
+        <a href="https://saaaachi.github.io/pianotile/" class="menu-btn link-btn">他のゲームはこちら</a>
     </div>
 
     <div id="ui">0</div>
@@ -47,18 +54,27 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const ui = document.getElementById("ui");
-        const startScreen = document.getElementById("startScreen");
+        const menuScreen = document.getElementById("menuScreen");
+        const menuTitle = document.getElementById("menuTitle");
+        const menuMsg = document.getElementById("menuMsg");
+        const goButton = document.getElementById("goButton");
 
-        // キャンバスサイズの再計算（上下150pxずつ、計300px引く）
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight - 300;
 
         let score = 0, gameActive = false, angle = 0, rotating = false, obstacles = [], speed = 3;
+        let animationId;
 
-        document.getElementById("goButton").onclick = () => {
-            startScreen.style.display = "none";
-            gameActive = true; score = 0; angle = 0; obstacles = []; speed = 3; ui.innerText = "0";
-            spawnObstacle(); update();
+        goButton.onclick = () => {
+            menuScreen.style.display = "none";
+            gameActive = true; 
+            score = 0; 
+            angle = 0; 
+            obstacles = []; 
+            speed = 3; 
+            ui.innerText = "0";
+            spawnObstacle(); 
+            update();
         };
 
         window.addEventListener("pointerdown", () => { rotating = true; });
@@ -80,42 +96,61 @@
             
             const playerX = canvas.width / 2;
             const playerY = canvas.height / 2;
-            
             const orbitX = canvas.width * 0.4;
-            const orbitY = canvas.height * 0.2; // 画面に合わせて少し調整
+            const orbitY = canvas.height * 0.2;
             
             const shipX = playerX + Math.cos(angle) * orbitX;
             const shipY = playerY + Math.sin(angle) * orbitY;
 
+            // 自機の描画
             ctx.fillStyle = "#00ff00";
-            ctx.beginPath(); ctx.arc(shipX, shipY, 12, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); 
+            ctx.arc(shipX, shipY, 12, 0, Math.PI * 2); 
+            ctx.fill();
 
-            obstacles.forEach((ob, i) => {
+            // 障害物の処理
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let ob = obstacles[i];
                 ob.y += speed;
                 ctx.fillStyle = "#ff4757";
                 ctx.fillRect(0, ob.y, ob.gapX, 25);
                 ctx.fillRect(ob.gapX + ob.gapW, ob.y, canvas.width, 25);
 
+                // 当たり判定
                 if(shipY > ob.y && shipY < ob.y + 25) {
                     if(shipX < ob.gapX || shipX > ob.gapX + ob.gapW) {
-                        gameActive = false; 
-                        alert("GAME OVER! SCORE: " + score); 
-                        location.reload();
+                        gameOver();
+                        return;
                     }
                 }
-                if(ob.y > canvas.height) { obstacles.splice(i, 1); score++; ui.innerText = score; speed += 0.04; }
-            });
-            requestAnimationFrame(update);
+
+                if(ob.y > canvas.height) { 
+                    obstacles.splice(i, 1); 
+                    score++; 
+                    ui.innerText = score; 
+                    speed += 0.04; 
+                }
+            }
+            animationId = requestAnimationFrame(update);
         }
 
-        // 🚀 30秒ごとにad.htmlを強制転生させる
+        function gameOver() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            menuTitle.innerText = "GAME OVER";
+            menuTitle.style.color = "#ff4757";
+            menuMsg.innerText = "SCORE: " + score;
+            goButton.innerText = "RETRY";
+            menuScreen.style.display = "flex";
+        }
+
         setInterval(() => {
             ["frame-top", "frame-bottom"].forEach(id => {
                 const frame = document.getElementById(id);
                 if (frame) {
                     const currentSrc = frame.src;
-                    frame.src = "about:blank"; // 一旦空にする
-                    setTimeout(() => { frame.src = currentSrc; }, 100); // 0.1秒後に再読み込み
+                    frame.src = "about:blank";
+                    setTimeout(() => { frame.src = currentSrc; }, 100);
                 }
             });
         }, 29000);
